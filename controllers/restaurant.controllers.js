@@ -14,9 +14,16 @@ exports.list = async (req, res) => {
         'SELECT id, name, full_address, rating, type FROM restaurant_list WHERE id IN (?)';
   
       console.log('Query Info:', queryInfo);
-  
       const restaurantResults = await sql.query(queryInfo, [ids]);
-      res.json(restaurantResults);
+      const readableResults = restaurantResults.map(row => {
+        return {
+          id: row.id,
+          name: row.name.toString('utf8'), // 将Buffer转换为UTF-8字符串
+          full_address: row.full_address.toString('utf8'),
+          rating: row.rating,
+        };
+      });
+      res.json(readableResults);
     } catch (error) {
       console.error('Error:', error);
       res.status(500).send({ message: 'Error retrieving restaurant list' });
