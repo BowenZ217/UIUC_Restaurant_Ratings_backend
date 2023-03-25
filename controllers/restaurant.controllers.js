@@ -1,6 +1,38 @@
 const sql = require("../module/database.js");
 
 exports.list = (req, res) => {
+    const queryIds = 'SELECT id FROM restaurant_list LIMIT 10';
+  
+    console.log('Query IDs:', queryIds);
+  
+    sql.query(queryIds, (error, results, fields) => {
+      if (error) {
+        console.error('Error:', error);
+        res.status(500).send({ message: 'Error retrieving restaurant list' });
+        return;
+      }
+  
+      const ids = results.map(result => result.id);
+  
+      const queryInfo =
+        'SELECT id, name, full_address, rating, type FROM restaurant_list WHERE id IN (?)';
+  
+      console.log('Query Info:', queryInfo);
+  
+      sql.query(queryInfo, [ids], (error, results, fields) => {
+        if (error) {
+          console.error('Error:', error);
+          res.status(500).send({ message: 'Error retrieving restaurant list' });
+          return;
+        }
+  
+        res.json(results);
+      });
+    });
+  };
+
+/*
+exports.list = (req, res) => {
     const page = req.query.page || 1;
     const sortField = req.query.sortField || 'id';
     const sortOrder = req.query.sortOrder || 'asc';
@@ -48,6 +80,7 @@ exports.list = (req, res) => {
         });
     });
 };  
+*/
 
 exports.findById = (req, res) => {
     const restaurantId = req.params.id;
