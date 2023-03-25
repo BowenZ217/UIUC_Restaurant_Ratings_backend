@@ -16,9 +16,16 @@ exports.list = (req, res) => {
         'SELECT id, name, full_address, rating, type FROM restaurant_list ' +
         sortClause +
         ' LIMIT ?, ?';
-  
-    sql.query(query, [startIndex, 10], (error, results) => {
-        if (error) throw error;
+
+    console.log('Query:', query); // 输出查询语句
+    console.log('StartIndex:', startIndex); // 输出起始索引
+    
+    sql.query(query, [startIndex, 10], (error, results, fields) => {
+        if (error) {
+            console.log('Error:', error); // 输出错误信息
+            throw error;
+        }
+        console.log('Results:', results); // 输出查询结果
         res.json(results);
     });
   };
