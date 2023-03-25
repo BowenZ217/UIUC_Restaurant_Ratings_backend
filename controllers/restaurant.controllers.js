@@ -1,16 +1,12 @@
 const sql = require("../module/database.js");
 
-exports.list = (req, res) => {
+exports.list = async (req, res) => {
     const queryIds = 'SELECT id FROM restaurant_list LIMIT 10';
   
     console.log('Query IDs:', queryIds);
   
-    sql.query(queryIds, (error, results, fields) => {
-      if (error) {
-        console.error('Error:', error);
-        res.status(500).send({ message: 'Error retrieving restaurant list' });
-        return;
-      }
+    try {
+      const results = await sql.query(queryIds);
   
       const ids = results.map(result => result.id);
   
@@ -19,17 +15,14 @@ exports.list = (req, res) => {
   
       console.log('Query Info:', queryInfo);
   
-      sql.query(queryInfo, [ids], (error, results, fields) => {
-        if (error) {
-          console.error('Error:', error);
-          res.status(500).send({ message: 'Error retrieving restaurant list' });
-          return;
-        }
-  
-        res.json(results);
-      });
-    });
+      const restaurantResults = await sql.query(queryInfo, [ids]);
+      res.json(restaurantResults);
+    } catch (error) {
+      console.error('Error:', error);
+      res.status(500).send({ message: 'Error retrieving restaurant list' });
+    }
   };
+  
 
 /*
 exports.list = (req, res) => {
