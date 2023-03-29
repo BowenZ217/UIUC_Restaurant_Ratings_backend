@@ -15,9 +15,19 @@ fs.readFile(dataPath, 'utf8', (err, data) => {
 
 exports.list = (req, res) => {
     const page = req.query.page || 1;
-    const sortField = req.query.sortField || 'id';
-    const sortOrder = req.query.sortOrder || 'asc';
+    sortField = req.query.sortField || 'cid';
+    sortOrder = req.query.sortOrder || 'asc';
     const rowsPerPage = 10;
+
+    if (sortField === 'restaurant_name') {
+        sortField = 'name';
+    }
+    if (sortField === 'restaurant_address') {
+        sortField = 'full_address';
+    }
+    if (sortField === 'restaurant_rating') {
+        sortField = 'rating';
+    }
   
     const startIndex = (page - 1) * 10;
 
