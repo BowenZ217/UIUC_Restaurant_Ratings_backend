@@ -8,7 +8,7 @@ module.exports = (app) => {
     router.get('/api/restaurant/list', restaurants.list);
     router.get('/api/restaurant/:id', restaurants.findById);
     //router.get('/api/restaurant/:id/menu', restaurants.getMenu);
-    router.get('/api/restaurant/search', restaurants.search);
+    //router.get('/api/restaurant/search', restaurants.search);
 
     // Users
     //router.post('/api/user/login', users.login);
