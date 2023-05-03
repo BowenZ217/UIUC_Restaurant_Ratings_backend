@@ -2,7 +2,11 @@
 const fs = require('fs');
 
 let restaurantData = null;
+let restaurantMenu = null;
 const dataPath = 'uiuc_restaurant_data.json';
+const menuPath = 'restaurant_menu.json';
+const allTypes = ['Chinese restaurant', 'Mexican restaurant', 'Fast food restaurant', 'American restaurant', 'Barbecue restaurant', 'Pizza restaurant', 'Italian restaurant', 'Sandwich shop', 'Other'];
+
 
 fs.readFile(dataPath, 'utf8', (err, data) => {
     if (err) {
@@ -13,10 +17,21 @@ fs.readFile(dataPath, 'utf8', (err, data) => {
     restaurantData = JSON.parse(data);
 });
 
+fs.readFile(menuPath, 'utf8', (err, data) => {
+    if (err) {
+        console.error(err);
+        return;
+    }
+
+    restaurantMenu = JSON.parse(data);
+});
+
+
 exports.list = (req, res) => {
     const page = req.query.page || 1;
     sortField = req.query.sortField || 'cid';
     sortOrder = req.query.sortOrder || 'asc';
+    FoodType = req.query.FoodType || 'all';
     const rowsPerPage = 10;
 
     if (sortField === 'restaurant_name') {
@@ -31,7 +46,7 @@ exports.list = (req, res) => {
   
     const startIndex = (page - 1) * 10;
 
-    console.log('StartIndex:', startIndex); // 输出起始索引
+    // console.log('StartIndex:', startIndex); // 输出起始索引
 
     /**
      * Sort array depends on `comparator`
@@ -81,21 +96,40 @@ exports.list = (req, res) => {
         return 0;
     };
 
-    const result = stableSort(restaurantData, getComparator(sortOrder, sortField))
-        .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-        .map(({ cid, name, full_address, rating, type }) => ({ restaurant_id: cid, restaurant_name: name, restaurant_address: full_address, restaurant_rating: rating, restaurant_type: type }));
+    let filteredData = restaurantData;
     
-    const maxPage = Math.ceil(restaurantData.length / rowsPerPage) - 1;
+    // if FoodType is not 'all'，则筛选数据
+    if (FoodType !== 'all') {
+        const types = FoodType.split(',');
+        filteredData = restaurantData.filter((restaurant) => {
+            if (types.includes(restaurant.type)) {
+                return true;
+            } else if (types.includes('Other')) {
+                // 当选择 "Other" 类型时，筛选出未列出的类型
+                return !allTypes.some((listedType) => listedType === restaurant.type);
+            } else {
+                return false;
+            }
+        });
+    }
+
+    // 使用筛选后的数据进行排序和分页
+    const result = stableSort(filteredData, getComparator(sortOrder, sortField))
+        .slice(startIndex, startIndex + rowsPerPage)
+        .map(({ cid, name, full_address, rating, type }) => ({ restaurant_id: cid, restaurant_name: name, restaurant_address: full_address, restaurant_rating: rating, restaurant_type: type }));
+
+    const maxPage = Math.ceil(filteredData.length / rowsPerPage) - 1;
 
     res.json({
         maxPage,
         data: result,
     });
-
+     /*
     console.log('Result:', {
         maxPage,
         data: result,
     }); // 输出结果
+    // */
 };
 
 exports.findById = (req, res) => {
@@ -126,29 +160,130 @@ exports.findById = (req, res) => {
     }
 };
 
-/*
 exports.search = (req, res) => {
-    const searchTerm = req.query.q;
-    const page = parseInt(req.query.page) || 1;
-    const sortField = req.query.sortField || 'id';
-    const sortOrder = req.query.sortOrder || 'asc';
+    searchTerm = req.query.q || '';
+    const page = req.query.page || 1;
+    sortField = req.query.sortField || 'cid';
+    sortOrder = req.query.sortOrder || 'asc';
+    FoodType = req.query.FoodType || 'all';
+    const rowsPerPage = 10;
+
+    if (sortField === 'restaurant_name') {
+        sortField = 'name';
+    }
+    if (sortField === 'restaurant_address') {
+        sortField = 'full_address';
+    }
+    if (sortField === 'restaurant_rating') {
+        sortField = 'rating';
+    }
   
     const startIndex = (page - 1) * 10;
-  
-    const sortClause =
-        sortField === 'name' || sortField === 'full_address' || sortField === 'rating' || sortField === 'type'
-            ? `ORDER BY ${sortField} ${sortOrder}`
-            : '';
-  
-    const query =
-        'SELECT id, name, full_address, rating, type FROM restaurant_list ' +
-        'WHERE name LIKE ? ' +
-        sortClause +
-        ' LIMIT ?, ?';
-  
-    sql.query(query, [`%${searchTerm}%`, startIndex, 10], (error, results) => {
-        if (error) throw error;
-        res.json(results);
+
+    // console.log('StartIndex:', startIndex); // 输出起始索引
+
+    /**
+     * Sort array depends on `comparator`
+     * 
+     * @param {*} array 
+     * @param {*} comparator 
+     * @returns 
+     */
+    const stableSort = (array, comparator) => {
+        const stabilizedThis = array.map((el, index) => [el, index]);
+        stabilizedThis.sort((a, b) => {
+        const order = comparator(a[0], b[0]);
+        if (order !== 0) return order;
+            return a[1] - b[1];
+        });
+        return stabilizedThis.map((el) => el[0]);
+    };
+
+    /**
+     * `comparator` for stableSort function
+     * 
+     * @param {*} order asc / desc
+     * @param {*} orderBy name of property
+     * @returns 
+     */
+    const getComparator = (order, orderBy) => {
+        return order === 'desc'
+            ? (a, b) => descendingComparator(a, b, orderBy)
+            : (a, b) => -descendingComparator(a, b, orderBy);
+    };
+
+    /**
+     * 
+     * @param {*} a 
+     * @param {*} b 
+     * @param {*} orderBy name of property
+     * 
+     * @returns {int} positive when a < b, negative when a > b
+     */
+    const descendingComparator = (a, b, orderBy) => {
+        if (b[orderBy] < a[orderBy]) {
+            return -1;
+        }
+        if (b[orderBy] > a[orderBy]) {
+            return 1;
+        }
+        return 0;
+    };
+
+    let filteredData = restaurantData;
+    
+    // if FoodType is not 'all'，则筛选数据
+    if (FoodType !== 'all') {
+        const types = FoodType.split(',');
+        filteredData = restaurantData.filter((restaurant) => {
+            if (types.includes(restaurant.type)) {
+                return true;
+            } else if (types.includes('Other')) {
+                // 当选择 "Other" 类型时，筛选出未列出的类型
+                return !allTypes.some((listedType) => listedType === restaurant.type);
+            } else {
+                return false;
+            }
+        });
+    }
+        
+    if (searchTerm !== '') {
+        filteredData = filteredData.filter((restaurant) =>
+            restaurant.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            restaurant.full_address.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    }
+
+    // 使用筛选后的数据进行排序和分页
+    const result = stableSort(filteredData, getComparator(sortOrder, sortField))
+        .slice(startIndex, startIndex + rowsPerPage)
+        .map(({ cid, name, full_address, rating, type }) => ({ restaurant_id: cid, restaurant_name: name, restaurant_address: full_address, restaurant_rating: rating, restaurant_type: type }));
+
+    const maxPage = Math.ceil(filteredData.length / rowsPerPage) - 1;
+
+    res.json({
+        maxPage,
+        data: result,
     });
+    // /*
+    console.log('searchTerm:', searchTerm);
+    
+    console.log('Result:', {
+        maxPage,
+        data: result,
+    }); // 输出结果
+    // */
 };
-*/
+
+exports.getMenu = (req, res) => {
+    const restaurantId = parseInt(req.params.id); // 将restaurantId从字符串转换为数字
+  
+    // 使用Array.find方法查找与restaurantId匹配的对象
+    const menuMatch = restaurantMenu.find((r) => r.cid === restaurantId);
+
+    if (menuMatch) {
+        res.json(menuMatch.menu);
+    } else {
+        res.status(404).json({ message: `Menu with id ${restaurantId} not found` }); // 返回404错误
+    }
+};

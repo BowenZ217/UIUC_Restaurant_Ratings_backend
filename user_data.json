@@ -1,0 +1,16 @@
+[
+  {
+    "id": 1,
+    "name": "qwerty",
+    "email": "qwerty@gmail.com",
+    "user_avatar": "/static/images/avatar/Default.jpeg",
+    "password": "qwerty"
+  },
+  {
+    "id": 2,
+    "name": "testcase",
+    "email": "testcase@gmail.com",
+    "user_avatar": "/static/images/avatar/Default.jpeg",
+    "password": "testcase"
+  }
+]
