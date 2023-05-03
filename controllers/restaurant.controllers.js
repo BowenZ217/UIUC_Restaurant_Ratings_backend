@@ -3,8 +3,8 @@ const fs = require('fs');
 
 let restaurantData = null;
 let restaurantMenu = null;
-const dataPath = 'uiuc_restaurant_data.json';
-const menuPath = 'restaurant_menu.json';
+const dataPath = 'data/filtered_restaurant_data.json';
+const menuPath = 'data/restaurant_menu.json';
 const allTypes = ['Chinese restaurant', 'Mexican restaurant', 'Fast food restaurant', 'American restaurant', 'Barbecue restaurant', 'Pizza restaurant', 'Italian restaurant', 'Sandwich shop', 'Other'];
 
 
@@ -152,6 +152,7 @@ exports.findById = (req, res) => {
             restaurant_booking_appointment_link: restaurant.booking_appointment_link,
             restaurant_range: restaurant.range,
             restaurant_photo: restaurant.photo,
+            restaurant_logo: restaurant.logo,
         };
       
         res.json(mappedRestaurant);
@@ -287,3 +288,44 @@ exports.getMenu = (req, res) => {
         res.status(404).json({ message: `Menu with id ${restaurantId} not found` }); // 返回404错误
     }
 };
+
+exports.rate = (req, res) => {
+    const restaurantId = parseInt(req.params.id);
+    const { userRate } = req.body;
+  
+    const restaurant = restaurantData.find((r) => r.cid === restaurantId);
+  
+    if (!restaurant) {
+        res.status(404).json({ message: `Restaurant with id ${restaurantId} not found` });
+        return;
+    }
+  
+    // 更新 reviews_per_score 对象
+    restaurant.reviews_per_score[userRate]++;
+    // 增加总评论数量
+    restaurant.reviews++;
+  
+    // 计算新的平均评分
+    let totalScore = 0;
+    let totalCount = 0;
+  
+    for (let i = 1; i <= 5; i++) {
+        totalScore += i * restaurant.reviews_per_score[i];
+        totalCount += restaurant.reviews_per_score[i];
+    }
+  
+    restaurant.rating = totalScore / totalCount;
+  
+    // 将更新后的 restaurantData 保存回文件
+    fs.writeFile(dataPath, JSON.stringify(restaurantData), "utf8", (err) => {
+        if (err) {
+            console.error(err);
+            res.status(500).json({ message: "Error saving data" });
+            return;
+        }
+    
+        // 返回更新后的餐厅评分
+        res.json({ rating: restaurant.rating });
+    });
+};
+  

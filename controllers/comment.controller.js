@@ -2,7 +2,7 @@
 const fs = require('fs');
 
 let restaurantReviews = null;
-const reviewPath = 'restaurant_reviews.json';
+const reviewPath = 'data/restaurant_reviews.json';
 
 fs.readFile(reviewPath, 'utf8', (err, data) => {
     if (err) {

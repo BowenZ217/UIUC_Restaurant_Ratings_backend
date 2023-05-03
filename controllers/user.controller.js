@@ -2,7 +2,7 @@
 const fs = require('fs');
 
 let userData = null;
-const userDataPath = 'user_data.json';
+const userDataPath = 'data/user_data.json';
 
 fs.readFile(userDataPath, 'utf8', (err, data) => {
     if (err) {
